@@ -61,6 +61,8 @@ ObjCSpaceBeforeProtocolList: true
 PointerAlignment: Left
 ReflowComments: false
 # SeparateDefinitionBlocks: Always   # Only support for clang-format 14
+SortIncludes: Never
+SortUsingDeclarations: true
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: true
@@ -78,6 +80,6 @@ SpacesInCStyleCastParentheses: false
 SpacesInContainerLiterals: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard: c++11
+Standard: c++17
 TabWidth: 4
 UseTab: Never
