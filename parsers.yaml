@@ -87,6 +87,7 @@ commands:
 
 # 添加规则
 prepend-rules:
+  - DOMAIN,gstatic.com,DIRECT
   - RULE-SET,applications,DIRECT
   - DOMAIN,clash.razord.top,DIRECT
   - DOMAIN,local.adguard.org,DIRECT
