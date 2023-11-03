@@ -48,6 +48,7 @@ const dns = {
 };
 
 const rules = [
+  "DOMAIN-SUFFIX,github.com, 🔰 选择节点",
   "DOMAIN,gstatic.com,DIRECT",
   "RULE-SET,applications,DIRECT",
   "DOMAIN,clash.razord.top,DIRECT",
