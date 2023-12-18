@@ -50,6 +50,12 @@ const dns = {
 const rules = [
   "DOMAIN-SUFFIX,github.com, 🔰 选择节点",
   "DOMAIN,gstatic.com,DIRECT",
+  "DOMAIN-SUFFIX,steamcontent.com,DIRECT",
+  "DOMAIN-SUFFIX,steamstatic.com,DIRECT",
+  "DOMAIN-SUFFIX,steamserver.net,DIRECT",
+  "DOMAIN-SUFFIX,test.steampowered.com,DIRECT",
+  "DOMAIN-SUFFIX,api.steampowered.com,DIRECT",
+  "DOMAIN-SUFFIX,rmbgame.net,DIRECT",
   "RULE-SET,applications,DIRECT",
   "DOMAIN,clash.razord.top,DIRECT",
   "DOMAIN,local.adguard.org,DIRECT",
