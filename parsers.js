@@ -1,8 +1,7 @@
 const _dns_default = ["223.5.5.5", "119.29.29.29"];
-// const _dns_nameserver = ["https://107834.alidns.com/dns-query"];
-const _dns_nameserver = ["https://d.adguard-dns.com/dns-query/2f9c68fc"];
+const _dns_nameserver = ["https://107834.alidns.com/dns-query"];
 const _dns_fallback = [
-//  "tls://2f9c68fc.d.adguard-dns.com",
+  "tls://2f9c68fc.d.adguard-dns.com",
   "tls://8.8.4.4:853",
   "https://1.1.1.1/dns-query",
 ];
