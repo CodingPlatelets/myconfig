@@ -47,7 +47,7 @@ const dns = {
 
 const rules = [
   "DOMAIN-SUFFIX,github.com, 🔰 选择节点",
-  "DOMAIN-SUFFIX,edaplayground.com, DIRECT",
+  "DOMAIN-SUFFIX,edaplayground.com, 🔰 选择节点",
   "DOMAIN,gstatic.com,DIRECT",
   "DOMAIN,hdlbits.01xz.net, 🔰 选择节点",
   "DOMAIN-SUFFIX,steamcontent.com,DIRECT",
