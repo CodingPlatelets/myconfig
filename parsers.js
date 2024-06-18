@@ -1,7 +1,8 @@
 const _dns_default = ["223.5.5.5", "119.29.29.29"];
 const _dns_nameserver = ["https://107834.alidns.com/dns-query"];
 const _dns_fallback = [
-  "https://1.1.1.1/dns-query"
+  "https://1.1.1.1/dns-query",
+  "https://dns.google/dns-query"
 ];
 const fallbackFilter = {
   geoip: true,
