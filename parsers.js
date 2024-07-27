@@ -57,7 +57,6 @@ const rules = [
   "DOMAIN-SUFFIX,steamstatic.com,DIRECT",
   "DOMAIN-SUFFIX,steamserver.net,DIRECT",
   "DOMAIN-SUFFIX,test.steampowered.com,DIRECT",
-  "DOMAIN-SUFFIX,api.steampowered.com,DIRECT",
   "DOMAIN-SUFFIX,rmbgame.net,DIRECT",
   "RULE-SET,applications,DIRECT",
   "DOMAIN,clash.razord.top,DIRECT",
