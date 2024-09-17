@@ -14,29 +14,49 @@ function main(content, profileName) {
     return { ...existingConfig, ...newConfig };
   };
 
-  const cnDnsList = ["tls://223.5.5.5", "tls://119.29.29.29"];
-  const trustDnsList = [
-    "https://1.0.0.1/dns-query",
+  const _dns_default = ["223.5.5.5", "119.29.29.29"];
+  const _dns_nameserver = ["https://107834.alidns.com/dns-query"];
+  const _dns_fallback = [
+    "https://1.1.1.1/dns-query",
     "https://dns.google/dns-query",
   ];
-  const notionDns = "tls://dns.jerryw.cn";
-  const notionUrls = [
-    "http-inputs-notion.splunkcloud.com",
-    "+.notion-static.com",
-    "+.notion.com",
-    "+.notion.new",
-    "+.notion.site",
-    "+.notion.so",
-  ];
-  const combinedUrls = notionUrls.join(",");
+  const fallbackFilter = {
+    geoip: true,
+    geoipCode: "CN",
+    ipcidr: ["240.0.0.0/4"],
+    domain: [
+      "+.lajichang.xyz",
+      "+.lajichang.eu",
+      "+.lajic.eu",
+      "+.198466.xyz",
+      "+.alibabaapi6.com",
+      "+.19842333.xyz",
+      "+.198477.xyz",
+      "+.198488.xyz",
+      "+.ipv6boy.xyz",
+      "+.ipv6boy.com",
+      "+.ipv6boy.top",
+      "+.google.com",
+      "+.facebook.com",
+      "+.twitter.com",
+      "+.tiktokv.com",
+      "+.bytedance.map.fastly",
+      "+.tiktok.com",
+      "+.youtube.com",
+      "+.xn--ngstr-lra8j.com",
+      "+.google.cn",
+      "+.googleapis.cn",
+      "+.googleapis.com",
+      "+.gvt1.com",
+    ],
+  };
+
   const dnsOptions = {
     enable: true,
-    "default-nameserver": cnDnsList, // 用于解析DNS服务器 的域名, 必须为IP, 可为加密DNS
-    "nameserver-policy": {
-      [combinedUrls]: notionDns,
-      "geosite:geolocation-!cn": trustDnsList,
-    },
-    nameserver: trustDnsList, // 默认的域名解析服务器, 如不配置fallback/proxy-server-nameserver, 则所有域名都由nameserver解析
+    "default-nameserver": _dns_default,
+    nameserver: _dns_nameserver,
+    fallback: _dns_fallback,
+    fallbackFilter: fallbackFilter,
   };
 
   // GitHub加速前缀
