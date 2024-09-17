@@ -83,6 +83,7 @@ function main(content, profileName) {
   };
   const rules = [
     "DOMAIN-SUFFIX,github.com, 🔰 选择节点",
+    "DOMAIN-SUFFIX,ipv6boy.xyz, 🔰 选择节点",
     "DOMAIN-SUFFIX,edaplayground.com, 🔰 选择节点",
     "DOMAIN-SUFFIX,docker.io, 🔰 选择节点",
     "DOMAIN,gstatic.com,DIRECT",
