@@ -120,6 +120,8 @@ function main(content, profileName) {
     "DOMAIN,local.adguard.org,DIRECT",
     "DOMAIN,yacd.haishan.me,DIRECT",
     "DOMAIN,injections.adguard.org, 🔰 选择节点",
+    "DOMAIN,垃圾场珀.com, 🔰 选择节点",
+    "DOMAIN,垃圾场六.com, 🔰 选择节点",
     "DOMAIN,akamaized.net, 🔰 选择节点",
     "RULE-SET,private,DIRECT",
     "RULE-SET,reject,🛑 广告拦截",
