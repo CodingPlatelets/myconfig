@@ -71,11 +71,11 @@ function main(content, profileName) {
     mmdb: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/country-lite.mmdb",
   };
 
-  // 生成带有加速前缀的GEO数据资源对象
+  // 生成带有加速前缀的GEO数据资源对象,直接使用 github，不使用加速前缀
   const accelURLs = Object.fromEntries(
     Object.entries(rawGeoxURLs).map(([key, githubUrl]) => [
       key,
-      `${githubPrefix}${githubUrl}`,
+      `${githubUrl}`,
     ])
   );
 
