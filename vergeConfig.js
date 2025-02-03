@@ -15,7 +15,7 @@ function main(content, profileName) {
   };
 
   const _dns_default = ["223.5.5.5", "119.29.29.29"];
-  const _dns_nameserver = ["https://107834.alidns.com/dns-query"];
+  const _dns_nameserver = ["https://223.5.5.5/dns-query"];
   const _dns_fallback = [
     "https://1.1.1.1/dns-query",
     "https://dns.google/dns-query",
@@ -33,9 +33,6 @@ function main(content, profileName) {
       "+.19842333.xyz",
       "+.198477.xyz",
       "+.198488.xyz",
-      "+.ipv6boy.xyz",
-      "+.ipv6boy.com",
-      "+.ipv6boy.top",
       "+.google.com",
       "+.facebook.com",
       "+.twitter.com",
