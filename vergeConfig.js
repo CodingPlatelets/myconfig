@@ -14,50 +14,51 @@ function main(content, profileName) {
     return { ...existingConfig, ...newConfig };
   };
 
-  const _dns_default = ["223.5.5.5", "119.29.29.29"];
-  const _dns_nameserver = ["https://223.5.5.5/dns-query"];
-  const _dns_fallback = [
-    "https://1.1.1.1/dns-query",
-    "https://dns.google/dns-query",
+  // 国内DNS服务器
+  const domesticNameservers = [
+    "https://dns.alidns.com/dns-query", // 阿里云公共DNS
+    "https://doh.pub/dns-query", // 腾讯DNSPod
   ];
-  const fallbackFilter = {
-    geoip: true,
-    geoipCode: "CN",
-    ipcidr: ["240.0.0.0/4"],
-    domain: [
-      "+.lajichang.xyz",
-      "+.lajichang.eu",
-      "+.lajic.eu",
-      "+.198466.xyz",
-      "+.alibabaapi6.com",
-      "+.19842333.xyz",
-      "+.198477.xyz",
-      "+.198488.xyz",
-      "+.google.com",
-      "+.facebook.com",
-      "+.twitter.com",
-      "+.tiktokv.com",
-      "+.bytedance.map.fastly",
-      "+.tiktok.com",
-      "+.youtube.com",
-      "+.xn--ngstr-lra8j.com",
-      "+.google.cn",
-      "+.googleapis.cn",
-      "+.googleapis.com",
-      "+.gvt1.com",
+  // 国外DNS服务器
+  const foreignNameservers = [
+    "https://1.1.1.1/dns-query", // Cloudflare(主)
+    "https://1.0.0.1/dns-query", // Cloudflare(备)
+    "https://208.67.222.222/dns-query", // OpenDNS(主)
+    "https://208.67.220.220/dns-query", // OpenDNS(备)
+    "https://194.242.2.2/dns-query", // Mullvad(主)
+    "https://194.242.2.3/dns-query" // Mullvad(备)
+  ];
+
+  const dnsConfig = {
+    "enable": true,
+    "listen": "0.0.0.0:1053",
+    "ipv6": true,
+    "use-system-hosts": true,
+    "cache-algorithm": "arc",
+    "enhanced-mode": "fake-ip",
+    "fake-ip-range": "198.18.0.1/16",
+    "fake-ip-filter": [
+      // 本地主机/设备
+      "+.lan",
+      "+.local",
+      // Windows网络出现小地球图标
+      "+.msftconnecttest.com",
+      "+.msftncsi.com",
+      // QQ快速登录检测失败
+      "localhost.ptlogin2.qq.com",
+      "localhost.sec.qq.com",
+      // 微信快速登录检测失败
+      "localhost.work.weixin.qq.com"
     ],
+    "default-nameserver": ["223.5.5.5", "119.29.29.29", "1.1.1.1", "8.8.8.8"],
+    "nameserver": [...domesticNameservers, ...foreignNameservers],
+    "proxy-server-nameserver": [...domesticNameservers, ...foreignNameservers],
+    "nameserver-policy": {
+      "geosite:private,cn,geolocation-cn": domesticNameservers,
+      "geosite:google,youtube,telegram,gfw,geolocation-!cn": foreignNameservers
+    }
   };
 
-  const dnsOptions = {
-    enable: true,
-    "default-nameserver": _dns_default,
-    nameserver: _dns_nameserver,
-    fallback: _dns_fallback,
-    fallbackFilter: fallbackFilter,
-  };
-
-  // GitHub加速前缀
-  const githubPrefix = "https://ghproxy.lainbo.com/";
 
   // GEO数据GitHub资源原始下载地址
   const rawGeoxURLs = {
@@ -103,6 +104,8 @@ function main(content, profileName) {
     "DOMAIN-SUFFIX,ipv6boy.xyz, 🔰 选择节点",
     "DOMAIN-SUFFIX,edaplayground.com, 🔰 选择节点",
     "DOMAIN-SUFFIX,docker.io, 🔰 选择节点",
+    "DOMAIN-SUFFIX, byr.pt, DIRECT",
+    "DOMAIN-SUFFIX, pandapt.net, DIRECT",
     "DOMAIN,gstatic.com,DIRECT",
     "DOMAIN-SUFFIX,acm.org,DIRECT",
     "DOMAIN-SUFFIX,ieee.org,DIRECT",
@@ -135,107 +138,114 @@ function main(content, profileName) {
     "RULE-SET,gfw,🔰 选择节点",
     "RULE-SET,greatfire,🔰 选择节点",
     "RULE-SET,telegramcidr,🔰 选择节点",
-    "RULE-SET,lancidr,DIRECT",
-    "RULE-SET,cncidr,DIRECT",
-    "GEOIP,CN,DIRECT",
+    "RULE-SET,lancidr,DIRECT,no-resolve",
+    "RULE-SET,cncidr,DIRECT,no-resolve",
     "RULE-SET,direct,DIRECT",
     "RULE-SET,proxy,🔰 选择节点",
+    "GEOIP,LAN,DIRECT,no-resolve",
+    "GEOIP,CN,DIRECT,no-resolve",
     "MATCH,🐟 漏网之鱼",
   ];
+
+  const ruleProviderCommon = {
+    "type": "http",
+    "format": "yaml",
+    "interval": 86400
+  };
   const rule_providers = {
     reject: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "domain",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt",
       path: "./ruleset/reject.yaml",
       interval: 86400,
     },
     icloud: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "domain",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt",
       path: "./ruleset/icloud.yaml",
       interval: 86400,
     },
     apple: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "domain",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt",
       path: "./ruleset/apple.yaml",
       interval: 86400,
     },
     google: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "domain",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/google.txt",
       path: "./ruleset/google.yaml",
       interval: 86400,
     },
     proxy: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "domain",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt",
       path: "./ruleset/proxy.yaml",
       interval: 86400,
     },
     direct: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "domain",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt",
       path: "./ruleset/direct.yaml",
       interval: 86400,
     },
     private: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "domain",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt",
       path: "./ruleset/private.yaml",
       interval: 86400,
     },
     gfw: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "domain",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt",
       path: "./ruleset/gfw.yaml",
       interval: 86400,
     },
     greatfire: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "domain",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/greatfire.txt",
       path: "./ruleset/greatfire.yaml",
       interval: 86400,
     },
     "tld-not-cn": {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "domain",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/tld-not-cn.txt",
       path: "./ruleset/tld-not-cn.yaml",
       interval: 86400,
     },
     telegramcidr: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "ipcidr",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/telegramcidr.txt",
       path: "./ruleset/telegramcidr.yaml",
       interval: 86400,
     },
     cncidr: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "ipcidr",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt",
       path: "./ruleset/cncidr.yaml",
       interval: 86400,
     },
     lancidr: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "ipcidr",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt",
       path: "./ruleset/lancidr.yaml",
       interval: 86400,
     },
     applications: {
-      type: "http",
+      ...ruleProviderCommon,
       behavior: "classical",
       url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt",
       path: "./ruleset/applications.yaml",
@@ -275,7 +285,7 @@ function main(content, profileName) {
     },
   ];
 
-  content.dns = mergeConfig(content.dns, dnsOptions);
+  content["dns"] = dnsConfig;
   content["proxy-groups"] = groups;
   content["rule-providers"] = rule_providers;
   content["rules"] = rules;
