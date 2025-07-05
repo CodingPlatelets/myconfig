@@ -16,7 +16,7 @@ function main(content, profileName) {
 
   // 国内DNS服务器
   const domesticNameservers = [
-    "https://dns.alidns.com/dns-query", // 阿里云公共DNS
+    "https://223.5.5.5/dns-query", // 阿里云公共DNS
     "https://doh.pub/dns-query", // 腾讯DNSPod
   ];
   // 国外DNS服务器
@@ -144,6 +144,7 @@ function main(content, profileName) {
       "*.linksys.com",
       "*.linksyssmartwifi.com",
       "*.router.asus.com",
+      "zte.home",
 
       // Apple 服务
       "mesu.apple.com",
