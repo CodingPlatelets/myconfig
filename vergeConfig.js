@@ -31,7 +31,7 @@ function main(content, profileName) {
 
   const dnsConfig = {
     "enable": true,
-    "listen": "0.0.0.0:1053",
+    "listen": "0.0.0.0:53",
     "ipv6": true,
     "use-system-hosts": true,
     "cache-algorithm": "arc",
