@@ -39,14 +39,15 @@ function main(content, profileName) {
     "fake-ip-range": "198.18.0.1/16",
     "fake-ip-filter": [
       // 本地主机/设备
+      // 本地网络
       "+.lan",
-      "+.localdomain",
-      "+.example",
-      "+.invalid",
-      "+.localhost",
-      "+.test",
-      "+.local",
-      "+.home.arpa",
+      "*.localdomain",
+      "*.example",
+      "*.invalid",
+      "*.localhost",
+      "*.test",
+      "*.local",
+      "*.home.arpa",
 
       // NTP服务
       "time.*.com",
@@ -144,7 +145,6 @@ function main(content, profileName) {
       "*.linksys.com",
       "*.linksyssmartwifi.com",
       "*.router.asus.com",
-      "zte.home",
 
       // Apple 服务
       "mesu.apple.com",
@@ -171,15 +171,7 @@ function main(content, profileName) {
       "+.sandai.net",
       "+.n0808.com",
       "services.googleapis.cn",
-      "+.market.xiaomi.com",
-      // Windows网络出现小地球图标
-      "+.msftconnecttest.com",
-      "+.msftncsi.com",
-      // QQ快速登录检测失败
-      "localhost.ptlogin2.qq.com",
-      "localhost.sec.qq.com",
-      // 微信快速登录检测失败
-      "localhost.work.weixin.qq.com"
+      "+.market.xiaomi.com"
     ],
     "default-nameserver": ["223.5.5.5", "119.29.29.29", "1.1.1.1", "8.8.8.8"],
     "nameserver": [...domesticNameservers, ...foreignNameservers],
