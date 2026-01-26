@@ -324,7 +324,7 @@ install_nvidia_toolkit() {
     log_ask "按回车键开始安装..."
     read -r
 
-    sh "$INSTALLER_FILE" --override
+    sh "$INSTALLER_FILE"
 
     if [ -d "/usr/local/cuda" ]; then
         log_info "配置 CUDA 环境变量..."
