@@ -1,13 +1,12 @@
 #!/bin/bash
 
 # ==============================================================================
-# Environment Setup Script (A100/H100/ARM64)
+# All-in-One Environment Setup Script (Ubuntu/CentOS/openEuler)
 # Features:
-#   1. OS Detection: Ubuntu(x86), CentOS 8+(x86), openEuler 23(ARM)
-#   2. Mirrors: Smart config (HUST/Tsinghua), skips if already set
-#   3. Shell: Zsh + Oh-My-Zsh (Tsinghua Mirror) + 5 Plugins
-#   4. Tools: git, clangd, uv, ssh-keygen(Ed25519)
-#   5. AI Tools: NVIDIA Toolkit (Safety Check), HuggingFace CLI (Mirror)
+#   - Adapts to A100/H100 (CUDA 12.5 check)
+#   - Installs Zsh, Oh-My-Zsh, Plugins, Tmux, Clangd, UV, HF-CLI
+#   - Smart Mirror Configuration (Tsinghua/HUST)
+#   - Idempotent: Can be run multiple times; asks to update if installed.
 # ==============================================================================
 
 set -e
@@ -16,6 +15,7 @@ set -e
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # --- 全局变量 ---
@@ -24,37 +24,57 @@ USER_HOME=$(eval echo ~$CURRENT_USER)
 ARCH=$(uname -m)
 OS_ID=""
 OS_VERSION=""
-CUDA_VERSION_REQ="12-5" # 对应 CUDA 12.5
+CUDA_VERSION_REQ="12-5"
+SHOULD_UPDATE=false
 
 log_info() { echo -e "${GREEN}[INFO] $1${NC}"; }
 log_warn() { echo -e "${YELLOW}[WARN] $1${NC}"; }
 log_err() { echo -e "${RED}[ERROR] $1${NC}"; }
+log_ask()  { echo -e "${CYAN}[QUESTION] $1${NC}"; }
 
-# --- 1. 系统检测 ---
-check_os() {
+# --- 0. 初始化检查与更新询问 ---
+init_check() {
+    if [[ "$EUID" -ne 0 ]]; then
+        log_err "请使用 root 权限或 sudo 运行此脚本。"
+        exit 1
+    fi
+
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         OS_ID=$ID
         OS_VERSION=$VERSION_ID
     else
-        log_err "无法检测操作系统版本 (/etc/os-release missing)."
+        log_err "无法检测操作系统版本。"
         exit 1
     fi
-
-    log_info "Detected OS: $OS_ID $OS_VERSION ($ARCH)"
-    log_info "Target User: $CURRENT_USER ($USER_HOME)"
     
-    if [[ "$EUID" -ne 0 ]]; then
-        log_err "请使用 root 权限或 sudo 运行此脚本。"
-        exit 1
+    log_info "Detected OS: $OS_ID $OS_VERSION ($ARCH)"
+    log_info "Target User: $CURRENT_USER"
+
+    # 检查标志性软件是否已存在，如果存在则询问是否更新
+    if [ -d "$USER_HOME/.oh-my-zsh" ] || command -v uv &> /dev/null; then
+        echo ""
+        log_warn "检测到环境中已安装部分软件 (Zsh/UV等)。"
+        log_ask "是否要更新已安装的软件和插件？(输入 y 更新，输入其他键仅安装缺失项)"
+        read -r -p "您的选择: " choice
+        if [[ "$choice" =~ ^[Yy]$ ]]; then
+            SHOULD_UPDATE=true
+            log_info "已启用更新模式。将尝试更新系统包、插件和工具。"
+        else
+            SHOULD_UPDATE=false
+            log_info "保持现有版本。脚本将仅安装缺失的组件 (幂等模式)。"
+        fi
+        echo ""
     fi
 }
 
-# --- 2. 配置系统镜像源 ---
+# --- 1. 配置系统镜像源 ---
 configure_mirrors() {
     log_info "检查系统软件源配置..."
     
-    # 智能跳过逻辑：如果已包含 .cn 或 edu.cn 则不修改
+    # 无论是否更新，如果已经配置了国内源，为了保护用户自定义配置，通常不建议强制覆盖
+    # 除非用户明确要求（这里保持“智能跳过”策略，因为换源风险较高）
+    
     if [[ "$OS_ID" == "ubuntu" ]]; then
         if grep -qE "(\.cn|edu\.cn)" /etc/apt/sources.list; then
             log_info "系统源已包含国内镜像(.cn/edu.cn)，跳过修改。"
@@ -68,7 +88,7 @@ configure_mirrors() {
         
     elif [[ "$OS_ID" == "centos" || "$OS_ID" == "rocky" || "$OS_ID" == "almalinux" ]]; then
         if grep -rE "(\.cn|edu\.cn)" /etc/yum.repos.d/ &> /dev/null; then
-            log_info "系统源已包含国内镜像(.cn/edu.cn)，跳过修改。"
+            log_info "系统源已包含国内镜像，跳过修改。"
         else
             log_info "配置 CentOS Stream HUST 源..."
             sed -e 's|^mirrorlist=|#mirrorlist=|g' \
@@ -79,7 +99,7 @@ configure_mirrors() {
 
     elif [[ "$OS_ID" == "openEuler" ]]; then
         if grep -rE "(\.cn|edu\.cn)" /etc/yum.repos.d/ &> /dev/null; then
-            log_info "系统源已包含国内镜像(.cn/edu.cn)，跳过修改。"
+            log_info "系统源已包含国内镜像，跳过修改。"
         else
             log_info "配置 openEuler HUST 源..."
             cp /etc/yum.repos.d/openEuler.repo /etc/yum.repos.d/openEuler.repo.bak 2>/dev/null || true
@@ -89,17 +109,33 @@ configure_mirrors() {
     fi
 }
 
-# --- 3. 安装基础软件 & Clangd ---
+# --- 2. 安装/更新 基础软件 (含 tmux) ---
 install_basics() {
-    log_info "安装基础软件 (git, curl, zsh, clangd)..."
+    local pkgs="git curl wget zsh tmux"
+    
+    # 根据系统不同追加包名
     if [[ "$OS_ID" == "ubuntu" ]]; then
-        apt-get install -y git curl wget zsh clangd openssh-client
+        pkgs="$pkgs clangd openssh-client"
+        if [ "$SHOULD_UPDATE" = true ]; then
+            log_info "正在更新系统软件包 (apt upgrade)..."
+            apt-get update && apt-get upgrade -y
+        fi
+        log_info "安装基础软件: $pkgs"
+        apt-get install -y $pkgs
+
     else
-        dnf install -y git curl wget zsh clang
+        # RHEL/CentOS/openEuler
+        pkgs="$pkgs clang" # clang 包通常包含 clangd
+        if [ "$SHOULD_UPDATE" = true ]; then
+            log_info "正在更新系统软件包 (dnf update)..."
+            dnf update -y
+        fi
+        log_info "安装基础软件: $pkgs"
+        dnf install -y $pkgs
     fi
 }
 
-# --- 4. 生成 SSH 密钥 (Ed25519) ---
+# --- 3. 生成 SSH 密钥 (幂等) ---
 generate_ssh_key() {
     local ssh_dir="$USER_HOME/.ssh"
     local key_file="$ssh_dir/id_ed25519"
@@ -111,7 +147,8 @@ generate_ssh_key() {
     fi
 
     if [ -f "$key_file" ]; then
-        log_warn "SSH Key (Ed25519) 已存在，跳过生成。"
+        # 即使更新模式，通常也不重置 SSH Key，防止断连
+        log_info "SSH Key (Ed25519) 已存在，跳过生成。"
     else
         log_info "正在为用户 $CURRENT_USER 生成 Ed25519 密钥..."
         sudo -u "$CURRENT_USER" ssh-keygen -t ed25519 -C "$CURRENT_USER@$(hostname)" -f "$key_file" -N "" -q
@@ -120,89 +157,114 @@ generate_ssh_key() {
     fi
 }
 
-# --- 5. 配置 Oh-My-Zsh ---
+# --- 4. 配置 Oh-My-Zsh 及插件 (支持更新) ---
 install_ohmyzsh() {
-    log_info "配置 Oh-My-Zsh..."
+    log_info "检查 Oh-My-Zsh 配置..."
 
+    # 1. 安装 OMZ
     if [ -d "$USER_HOME/.oh-my-zsh" ]; then
-        log_warn "Oh-My-Zsh 目录已存在，跳过 clone。"
+        if [ "$SHOULD_UPDATE" = true ]; then
+            log_info "更新 Oh-My-Zsh 核心..."
+            # 以用户身份执行 git pull
+            sudo -u "$CURRENT_USER" git -C "$USER_HOME/.oh-my-zsh" pull || log_warn "OMZ 更新失败，跳过"
+        else
+            log_info "Oh-My-Zsh 已安装，跳过。"
+        fi
     else
+        log_info "Clone Oh-My-Zsh (Tsinghua Mirror)..."
         sudo -u "$CURRENT_USER" git clone https://mirrors.tuna.tsinghua.edu.cn/git/ohmyzsh.git "$USER_HOME/.oh-my-zsh"
         if [ ! -f "$USER_HOME/.zshrc" ]; then
             sudo -u "$CURRENT_USER" cp "$USER_HOME/.oh-my-zsh/templates/zshrc.zsh-template" "$USER_HOME/.zshrc"
         fi
     fi
 
-    # 切换默认 Shell
+    # 确保 shell 切换
     if [[ "$SHELL" != */zsh ]]; then
         usermod -s $(which zsh) $CURRENT_USER
         log_info "默认 Shell 已修改为 Zsh"
     fi
 
-    # --- 安装插件 ---
+    # 2. 安装/更新 插件
     ZSH_CUSTOM="$USER_HOME/.oh-my-zsh/custom"
     PLUGIN_DIR="$ZSH_CUSTOM/plugins"
     
-    install_plugin() {
+    install_or_update_plugin() {
         local name=$1
         local repo=$2
-        if [ ! -d "$PLUGIN_DIR/$name" ]; then
-            log_info "安装 Zsh 插件: $name..."
-            sudo -u "$CURRENT_USER" git clone $repo "$PLUGIN_DIR/$name"
+        local target="$PLUGIN_DIR/$name"
+        
+        if [ -d "$target" ]; then
+            if [ "$SHOULD_UPDATE" = true ]; then
+                log_info "更新插件 $name..."
+                sudo -u "$CURRENT_USER" git -C "$target" pull || true
+            else
+                log_info "插件 $name 已存在，跳过。"
+            fi
+        else
+            log_info "安装插件: $name..."
+            sudo -u "$CURRENT_USER" git clone $repo "$target"
         fi
     }
 
-    install_plugin "zsh-autosuggestions" "https://github.com/zsh-users/zsh-autosuggestions"
-    install_plugin "zsh-syntax-highlighting" "https://github.com/zsh-users/zsh-syntax-highlighting.git"
-    install_plugin "zsh-autocomplete" "https://github.com/marlonrichert/zsh-autocomplete.git"
+    install_or_update_plugin "zsh-autosuggestions" "https://github.com/zsh-users/zsh-autosuggestions"
+    install_or_update_plugin "zsh-syntax-highlighting" "https://github.com/zsh-users/zsh-syntax-highlighting.git"
+    install_or_update_plugin "zsh-autocomplete" "https://github.com/marlonrichert/zsh-autocomplete.git"
 
-    # --- 修改 .zshrc ---
-    local zshrc="$USER_HOME/.zshrc"
-    sed -i 's/^plugins=(.*)/plugins=(git z zsh-autosuggestions zsh-syntax-highlighting zsh-autocomplete)/' "$zshrc"
+    # 3. 修改 .zshrc (幂等：每次都强制确保 plugins 行正确)
+    log_info "配置 .zshrc 插件列表..."
+    sed -i 's/^plugins=(.*)/plugins=(git z zsh-autosuggestions zsh-syntax-highlighting zsh-autocomplete)/' "$USER_HOME/.zshrc"
 }
 
-# --- 6. 安装 UV ---
+# --- 5. 安装/更新 UV ---
 install_uv() {
-    log_info "安装 uv (Python 包管理器)..."
-    if ! command -v uv &> /dev/null; then
+    log_info "检查 uv (Python 包管理器)..."
+    if command -v uv &> /dev/null; then
+        if [ "$SHOULD_UPDATE" = true ]; then
+            log_info "更新 uv..."
+            uv self update || log_warn "uv self update 失败，可能需要 root 或非安装方式"
+        else
+            log_info "uv 已安装，跳过。"
+        fi
+    else
         # 安装到全局路径
         curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh
-    else
-        log_info "uv 已安装。"
     fi
 }
 
-# --- 7. 安装 HuggingFace CLI (新增) ---
+# --- 6. 安装/更新 HuggingFace CLI ---
 install_hf_cli() {
-    log_info "使用 uv 安装 HuggingFace CLI 并配置镜像..."
+    log_info "检查 HuggingFace CLI..."
     local zshrc="$USER_HOME/.zshrc"
 
-    # 1. 使用 uv tool 安装 huggingface_hub
-    # 注意：uv tool 默认安装到 ~/.local/bin，需要以目标用户身份运行
-    if ! sudo -u "$CURRENT_USER" uv tool list | grep -q "huggingface-hub"; then
-        sudo -u "$CURRENT_USER" uv tool install huggingface_hub
-        log_info "HuggingFace CLI 安装完成。"
+    # 1. 安装/更新 CLI
+    if sudo -u "$CURRENT_USER" uv tool list | grep -q "huggingface-hub"; then
+        if [ "$SHOULD_UPDATE" = true ]; then
+            log_info "升级 huggingface-hub..."
+            sudo -u "$CURRENT_USER" uv tool upgrade huggingface_hub
+        else
+            log_info "huggingface-hub 已安装，跳过。"
+        fi
     else
-        log_info "HuggingFace CLI 已安装。"
+        log_info "安装 huggingface-hub..."
+        sudo -u "$CURRENT_USER" uv tool install huggingface_hub
     fi
 
-    # 2. 确保 ~/.local/bin 在 PATH 中 (uv tool 的安装路径)
+    # 2. 幂等配置 PATH
     if ! grep -q "export PATH=\$HOME/.local/bin:\$PATH" "$zshrc"; then
         echo '' >> "$zshrc"
         echo '# User Local Bin (for uv tools)' >> "$zshrc"
         echo 'export PATH=$HOME/.local/bin:$PATH' >> "$zshrc"
     fi
 
-    # 3. 配置 HF_ENDPOINT 镜像
+    # 3. 幂等配置 镜像
     if ! grep -q "HF_ENDPOINT" "$zshrc"; then
         echo '' >> "$zshrc"
         echo '# Hugging Face Mirror' >> "$zshrc"
         echo 'export HF_ENDPOINT=https://hf-mirror.com' >> "$zshrc"
-        log_info "已配置 HF_ENDPOINT 为 hf-mirror.com"
     fi
 }
 
-# --- 8. 安装 NVIDIA Toolkit ---
+# --- 7. 安装 NVIDIA Toolkit (保守策略) ---
 install_nvidia_toolkit() {
     log_info "检查 NVIDIA 环境..."
     
@@ -211,16 +273,19 @@ install_nvidia_toolkit() {
         return
     fi
 
+    # 检查 nvcc 是否已存在
+    if command -v nvcc &> /dev/null; then
+        log_info "检测到已安装 CUDA Toolkit (`nvcc --version` 检测通过)。"
+        # 即使在更新模式，也不建议自动覆盖 CUDA 版本，容易导致环境崩溃
+        log_warn "为保证环境稳定性，脚本不会自动覆盖或升级现有的 CUDA Toolkit。"
+        return
+    fi
+
     DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -n 1)
     DRIVER_MAJOR=$(echo $DRIVER_VER | cut -d. -f1)
     
     if [ "$DRIVER_MAJOR" -lt 555 ]; then
         log_warn "驱动版本 $DRIVER_VER 低于 555，不支持 CUDA 12.5。跳过安装。"
-        return
-    fi
-
-    if command -v nvcc &> /dev/null; then
-        log_info "检测到已安装 nvcc，跳过安装。"
         return
     fi
 
@@ -243,7 +308,7 @@ install_nvidia_toolkit() {
         yum install -y cuda-toolkit-${CUDA_VERSION_REQ}
     fi
     
-    # 环境变量
+    # 环境变量 (幂等添加)
     if [ -d "/usr/local/cuda" ]; then
         if ! grep -q "export PATH=/usr/local/cuda/bin" "$USER_HOME/.zshrc"; then
             echo '' >> "$USER_HOME/.zshrc"
@@ -255,16 +320,16 @@ install_nvidia_toolkit() {
 }
 
 # --- 执行主流程 ---
-check_os
+init_check
 configure_mirrors
 install_basics
 generate_ssh_key
 install_ohmyzsh
 install_uv
-install_hf_cli      # 新增步骤
+install_hf_cli
 install_nvidia_toolkit
 
 log_info "========================================================"
-log_info "配置完成！请执行 'source ~/.zshrc' 生效环境变量。"
-log_info "HuggingFace 测试: source ~/.zshrc && huggingface-cli env"
+log_info "所有任务执行完毕。"
+log_info "请执行 'source ~/.zshrc' 或重新登录以应用更改。"
 log_info "========================================================"
