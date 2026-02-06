@@ -223,6 +223,10 @@ function main(content, profileName) {
     "geox-url": accelURLs,
   };
   const rules = [
+    'DOMAIN,vpn.hust.edu.cn,DIRECT',
+    'DOMAIN-SUFFIX,hust.edu.cn,校园网',
+    'IP-CIDR,202.114.0.0/16,校园网,no-resolve',
+    'IP-CIDR,211.68.0.0/16,校园网,no-resolve',
     "DOMAIN-SUFFIX,github.com, 🔰 选择节点",
     "DOMAIN-SUFFIX,ipv6boy.xyz, 🔰 选择节点",
     "DOMAIN-SUFFIX,edaplayground.com, 🔰 选择节点",
@@ -385,6 +389,15 @@ function main(content, profileName) {
     hidden: false,
   };
 
+  content.proxies = content.proxies || [];
+    content.proxies.push({
+      name: 'HITSZ Connect Verge',
+      type: 'socks5',
+      server: '127.0.0.1',
+      port: 11080,
+      udp: true
+    });
+
   const proxies = content["proxies"];
   const pro = proxies.map((item) => item.name);
   const groups = [
@@ -405,6 +418,12 @@ function main(content, profileName) {
       name: "🐟 漏网之鱼",
       type: "select",
       proxies: ["DIRECT", "REJECT", "🔰 选择节点"],
+    },
+    {
+      ...groupBaseOption,
+      name: '校园网',
+      type: 'select',
+      proxies: ['DIRECT', 'HITSZ Connect Verge']
     },
   ];
 
