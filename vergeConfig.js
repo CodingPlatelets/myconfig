@@ -161,7 +161,7 @@ function main(content, profileName) {
     "max-failed-times": 3,
   };
   const groups = [
-    { ...selectionHealthCheck, name: SELECT, type: "select", proxies: [DIRECT_TEST, ...subscriptionProxyNames] },
+    { ...selectionHealthCheck, name: SELECT, type: "select", proxies: [...subscriptionProxyNames, DIRECT_TEST] },
     { name: REJECT, type: "select", proxies: ["REJECT", "DIRECT", SELECT] },
     { name: FINAL, type: "select", proxies: [SELECT, "DIRECT", "REJECT"] },
     { name: CAMPUS, type: "select", proxies: ["DIRECT", CAMPUS_PROXY] },
