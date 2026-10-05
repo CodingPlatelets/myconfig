@@ -98,7 +98,6 @@ function main(content, profileName) {
     `DOMAIN-SUFFIX,docker.io,${SELECT}`,
     "DOMAIN-SUFFIX,byr.pt,DIRECT",
     "DOMAIN-SUFFIX,pandapt.net,DIRECT",
-    "DOMAIN-SUFFIX,gstatic.com,DIRECT",
     "DOMAIN-SUFFIX,acm.org,DIRECT",
     "DOMAIN-SUFFIX,ieee.org,DIRECT",
     `DOMAIN,hdlbits.01xz.net,${SELECT}`,
