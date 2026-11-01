@@ -52,6 +52,15 @@ function main(content, profileName) {
     nameserver: foreignNameservers,
     // 节点服务器域名必须在代理建立前解析，故只放可直连的国内 DNS。
     "proxy-server-nameserver": domesticNameservers,
+    // 国内域名使用国内加密 DNS 以获取本地 CDN；这些域名会被 DNS 服务商看到。
+    // 其他域名仍使用上面的代理 DoH。显式列出常见站点，避免规则库遗漏子域名。
+    "nameserver-policy": {
+      "+.qq.com": domesticNameservers,
+      "+.jd.com": domesticNameservers,
+      "+.taobao.com": domesticNameservers,
+      "+.byte-test.com": domesticNameservers,
+      "geosite:cn,geolocation-cn": domesticNameservers,
+    },
   };
 
   const ruleProviderBase = {
