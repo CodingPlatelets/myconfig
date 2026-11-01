@@ -113,12 +113,28 @@ function main(content, profileName) {
     `DOMAIN-SUFFIX,akamaized.net,${SELECT}`,
   ];
 
+  // 仅将常见 STUN/TURN 流量交给代理，其余 UDP 继续按原有规则分流。
+  // 端口匹配也覆盖直接使用 IP 的请求，但这些端口上的游戏语音等也会走代理。
+  // 这不是协议识别：未列出的服务器使用其他端口时，仍按普通规则处理。
+  const stunMatchers = [
+    "DST-PORT,3478",
+    "DST-PORT,5349",
+    "DST-PORT,19302",
+    "DOMAIN,stun.cloudflare.com",
+    "DOMAIN,turn.cloudflare.com",
+    "DOMAIN,stun.l.google.com",
+    "DOMAIN,stun1.l.google.com",
+    "DOMAIN,stun2.l.google.com",
+    "DOMAIN,stun3.l.google.com",
+    "DOMAIN,stun4.l.google.com",
+  ];
+  const stunRule = `AND,((NETWORK,UDP),(OR,(${stunMatchers.map((rule) => `(${rule})`).join(",")})))`;
+
   const rules = [
-    // 先保留局域网 IP 直连；其余 UDP（包括任意端口的 WebRTC/STUN）走所选节点。
-    // 若节点不支持 UDP，下一条 REJECT 防止继续匹配到国内直连规则。
     "GEOIP,LAN,DIRECT,no-resolve",
-    `NETWORK,UDP,${SELECT}`,
-    "NETWORK,UDP,REJECT",
+    `${stunRule},${SELECT}`,
+    // 仅在匹配上述范围且节点不支持 UDP 时拒绝，避免继续落入直连规则。
+    `${stunRule},REJECT`,
     ...CUSTOM_RULES,
     "RULE-SET,applications,DIRECT",
     "RULE-SET,private,DIRECT",
