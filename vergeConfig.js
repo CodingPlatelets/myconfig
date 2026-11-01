@@ -24,8 +24,8 @@ function main(content, profileName) {
   ];
 
   const domesticNameservers = [
-    "https://dns.alidns.com/dns-query",
-    "https://doh.pub/dns-query",
+    "https://dns.alidns.com/dns-query#DIRECT",
+    "https://doh.pub/dns-query#DIRECT",
   ];
   // #策略组 让境外 DoH 请求随所选节点发出，避免直连被污染或阻断。
   const foreignNameservers = [
@@ -47,14 +47,11 @@ function main(content, profileName) {
     "fake-ip-range": "198.18.0.1/16",
     "fake-ip-filter": fakeIpFilter,
     // 仅用于解析 DoH 主机名：必须能在无代理时使用。
-    "default-nameserver": ["223.5.5.5", "119.29.29.29"],
-    nameserver: [...domesticNameservers, ...foreignNameservers],
+    "default-nameserver": ["223.5.5.5#DIRECT", "119.29.29.29#DIRECT"],
+    // 默认查询只走代理 DoH，避免未知域名同时向国内和境外 DNS 查询。
+    nameserver: foreignNameservers,
     // 节点服务器域名必须在代理建立前解析，故只放可直连的国内 DNS。
     "proxy-server-nameserver": domesticNameservers,
-    "nameserver-policy": {
-      "geosite:private,cn,geolocation-cn": domesticNameservers,
-      "geosite:google,youtube,telegram,gfw,geolocation-!cn": foreignNameservers,
-    },
   };
 
   const ruleProviderBase = {
@@ -117,6 +114,11 @@ function main(content, profileName) {
   ];
 
   const rules = [
+    // 先保留局域网 IP 直连；其余 UDP（包括任意端口的 WebRTC/STUN）走所选节点。
+    // 若节点不支持 UDP，下一条 REJECT 防止继续匹配到国内直连规则。
+    "GEOIP,LAN,DIRECT,no-resolve",
+    `NETWORK,UDP,${SELECT}`,
+    "NETWORK,UDP,REJECT",
     ...CUSTOM_RULES,
     "RULE-SET,applications,DIRECT",
     "RULE-SET,private,DIRECT",
