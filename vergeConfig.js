@@ -90,6 +90,8 @@ function main(content, profileName) {
     `IP-CIDR,202.114.0.0/16,${CAMPUS},no-resolve`,
     `IP-CIDR,211.68.0.0/16,${CAMPUS},no-resolve`,
     `DOMAIN-SUFFIX,github.com,${SELECT}`,
+    // Google 登录页的交互脚本依赖 gstatic，必须与登录请求一起走代理。
+    `DOMAIN-SUFFIX,gstatic.com,${SELECT}`,
     `DOMAIN-SUFFIX,ipv6boy.xyz,${SELECT}`,
     `DOMAIN-SUFFIX,edaplayground.com,${SELECT}`,
     `DOMAIN-SUFFIX,docker.io,${SELECT}`,
